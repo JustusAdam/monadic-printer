@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 {-|
 Module      : $Header$
-Description : Write Texts with do-notation
+Description : Write long texts with do-notation
 Copyright   : (c) Justus Adam, 2015
 License     : BSD3
 Maintainer  : dev@justus.science
@@ -12,8 +13,8 @@ Portability : POSIX, Windows
 
 = How to use it
 
-"monadic-printer" enables you to write multi-line texts easily using moandic do-notation.
-Using the library requires the 'OverloadedStrings' extension to be enabled.
+"monadic-printer" enables you to write multi-line texts easily using do-notation.
+It is recommended to use this library with the 'OverloadedStrings' extension enabled.
 
 == Examples
 
@@ -46,7 +47,7 @@ Prints the following to stdout
     "line"
 @
 
-Produces @"My text\nline\nby\nline" :: Text@
+Produces @"My text\\nline\\nby\\nline" :: Text@
 
 Or you can retrieve the content as list of lines
 
@@ -64,11 +65,27 @@ Produces @["My text","line","by","line"] :: [Text]@
 === Using Showable data and other strings
 
 This library also provides some convenient conversion functions for Strings other
-than 'Text' and data with a 'Show' instance
+than 'Text', and data with a 'Show' instance. Hence
 
 @
+  let string = "hello" :: String
   log_ $ do
+    cs string
+    "next line"
+    co 1378
+    "last line"
+@
 
+will print
+
+@
+  hello
+  next line
+  1378
+  last line
+@
+
+to stdout.
 
 -}
 module Text.MonadicPrinter
@@ -90,20 +107,21 @@ module Text.MonadicPrinter
   ) where
 
 
-import Control.Applicative
-import Data.Monoid
-import Data.String (IsString, fromString)
-import Unsafe.Coerce
-import Data.Text (Text, pack, unlines)
-import Data.Text.IO
-import Prelude hiding (putStrLn, unlines)
-import System.IO (Handle)
-import Data.Foldable (traverse_)
-import qualified Data.String.Conversions as CS (ConvertibleStrings, convertString)
+import           Control.Applicative
+import           Data.Foldable           (traverse_)
+import           Data.Monoid
+import           Data.String             (IsString, fromString)
+import qualified Data.String.Conversions as CS (ConvertibleStrings,
+                                                convertString)
+import           Data.Text               (Text, pack, unlines)
+import           Data.Text.IO
+import           Prelude                 hiding (putStrLn, unlines)
+import           System.IO               (Handle)
+import           Unsafe.Coerce
 
 
--- | Saves the text you write for you
-data Printer a = Printer
+-- | Stores what you write
+newtype Printer a = Printer
   { getLines :: [Text] -- ^ Get all contents of the printer as list of lines
   }
 
@@ -122,7 +140,7 @@ instance Applicative Printer where
 instance Monad Printer where
   (>>) = (*>)
 
-  h >>= f = h >> f (error "Cannot use monadig bind here")
+  h >>= f = h >> f (error "Cannot use monadic bind here")
 
   return = pure
 
@@ -166,17 +184,21 @@ getText :: Printer a -> Text
 getText = unlines . getLines
 
 
+-- | Convert a non-literal String to something printable
 convertString :: CS.ConvertibleStrings a Text => a -> Printer c
 convertString = Printer . return . CS.convertString
 
 
+-- | shorter form of 'convertString'
 cs :: CS.ConvertibleStrings a Text => a -> Printer c
 cs = convertString
 
 
+-- | convert a showable piece of data into something printable
 convertObject :: Show a => a -> Printer b
 convertObject = convertString . show
 
 
+-- | shorter form of 'convertObject'
 co :: Show a => a -> Printer b
 co = convertObject
