@@ -90,6 +90,7 @@ module Text.MonadicPrinter
   ) where
 
 
+import Control.Applicative
 import Data.Monoid
 import Data.String (IsString, fromString)
 import Unsafe.Coerce
@@ -104,7 +105,7 @@ import qualified Data.String.Conversions as CS (ConvertibleStrings, convertStrin
 -- | Saves the text you write for you
 data Printer a = Printer
   { getLines :: [Text] -- ^ Get all contents of the printer as list of lines
-  } 
+  }
 
 
 instance Functor Printer where
