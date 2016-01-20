@@ -1,4 +1,4 @@
-# monadic-printer
+# monadic-printer [![Travis Status](https://travis-ci.org/JustusAdam/monadic-printer.svg?branch=master)](https://travis-ci.org/JustusAdam/monadic-printer)
 
 A simple library for writing texts easier using do-notation.
 
