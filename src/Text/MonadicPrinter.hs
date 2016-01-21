@@ -28,6 +28,10 @@ It is recommended to use this library with the 'OverloadedStrings' extension ena
     "combining " <> "text"
 @
 
+As you can see in the last line, you can combine pieces of Text using the '<>'
+operator or 'mappend' method from 'Data.Monoid' which is reexported by this module
+for your convenience.
+
 Prints the following to stdout
 
 @
@@ -87,11 +91,35 @@ will print
 
 to stdout.
 
+=== All together
+
+@
+  let name = \"Jeremy\"
+      millions = 4
+  log_ $ do
+    "He said he didn't want to do it."
+    "\\"" <> cs name <> "\\" I said, \\"You have to. This job will make us rich.\\""
+    "\\"How rich exactly?\\""
+    "\\"" <> co millions <> " million dollars at least\\""
+    "This seemed to convince him."
+@
+
+Prints
+
+@
+  He said he didn't want to do it.
+  \"Jeremy\" I said, "You have to. This job will make us rich."
+  "How rich exactly?"
+  "4 million dollars at least"
+  This seemed to convince him.
+@
+
 -}
 module Text.MonadicPrinter
   (
   -- * Writing
     Printer
+
   , module Data.Monoid
   -- ** Conversion functions
   , convertString, cs
@@ -120,7 +148,10 @@ import           System.IO               (Handle)
 import           Unsafe.Coerce
 
 
--- | Stores what you write
+-- | Stores what you write.
+--
+-- The type variale only exists for the 'Monad' instance and is ignored in all
+-- operations.
 newtype Printer a = Printer
   { getLines :: [Text] -- ^ Get all contents of the printer as list of lines
   }
