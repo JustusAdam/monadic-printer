@@ -125,8 +125,8 @@ module Text.MonadicPrinter
   , convertString, cs
   , convertObject, co
   -- * Printing
-  , print_
-  , log_
+  , print
+  , log
   , hPrint
   , hLog
   -- * Retrieving contents
@@ -137,13 +137,14 @@ module Text.MonadicPrinter
 
 import           Control.Applicative
 import           Data.Foldable           (traverse_)
+import           Data.List               (intersperse)
 import           Data.Monoid
 import           Data.String             (IsString, fromString)
 import qualified Data.String.Conversions as CS (ConvertibleStrings,
                                                 convertString)
-import           Data.Text               (Text, pack, unlines)
+import           Data.Text               (Text)
 import           Data.Text.IO
-import           Prelude                 hiding (putStrLn, unlines)
+import           Prelude                 hiding (putStrLn, unlines, print, log)
 import           System.IO               (Handle)
 import           Unsafe.Coerce
 
@@ -191,13 +192,13 @@ instance Monoid t => Monoid (Printer t a) where
 
 -- | Write some lines to stdout. For a version that writes to a different handle
 -- see 'hPrint'.
-print_ :: Printer Text a -> IO ()
-print_ (Printer s) = traverse_ putStrLn s
+print :: Printer Text a -> IO ()
+print (Printer s) = traverse_ putStrLn s
 
 
 -- | Synonym for 'print_'
-log_ :: Printer Text a -> IO ()
-log_ = print_
+log :: Printer Text a -> IO ()
+log = print
 
 
 -- | Write some lines to a handle.
@@ -211,8 +212,8 @@ hLog = hPrint
 
 
 -- | Get all the printer contents as a single piece of 'Text' (inserts newlines)
-getText :: Printer Text a -> Text
-getText = unlines . getLines
+getText :: (Monoid t, IsString t) => Printer t a -> t
+getText = mconcat . intersperse "\n" . getLines
 
 
 -- | Convert a non-literal String to something printable
