@@ -1,7 +1,3 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-
 {-|
 Module      : $Header$
 Description : Write long texts with do-notation
@@ -115,6 +111,10 @@ Prints
 @
 
 -}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+
 module Text.MonadicPrinter
   (
   -- * Writing
@@ -152,23 +152,23 @@ import           Unsafe.Coerce
 --
 -- The type variale only exists for the 'Monad' instance and is ignored in all
 -- operations.
-newtype Printer a = Printer
-  { getLines :: [Text] -- ^ Get all contents of the printer as list of lines
+newtype Printer t a = Printer
+  { getLines :: [t] -- ^ Get all contents of the printer as list of lines
   }
 
 
-instance Functor Printer where
+instance Functor (Printer t) where
   fmap _ = unsafeCoerce
 
 
-instance Applicative Printer where
+instance Applicative (Printer t) where
   pure = const $ Printer []
   f <*> v = f >> fmap unsafeCoerce v
   (Printer c1) *> (Printer c2) = Printer (c1 <> c2)
   (Printer c1) <* (Printer c2) = Printer (c2 <> c1)
 
 
-instance Monad Printer where
+instance Monad (Printer t) where
   (>>) = (*>)
 
   h >>= f = h >> f (error "Cannot use monadic bind here")
@@ -176,11 +176,11 @@ instance Monad Printer where
   return = pure
 
 
-instance IsString (Printer a) where
-  fromString s = Printer [pack s]
+instance IsString t => IsString (Printer t a) where
+  fromString s = Printer [fromString s]
 
 
-instance Monoid (Printer a) where
+instance Monoid t => Monoid (Printer t a) where
   mempty = Printer []
   mappend (Printer s1) (Printer s2) =
     Printer $ case (reverse s1, s2) of
@@ -191,45 +191,45 @@ instance Monoid (Printer a) where
 
 -- | Write some lines to stdout. For a version that writes to a different handle
 -- see 'hPrint'.
-print_ :: Printer a -> IO ()
+print_ :: Printer Text a -> IO ()
 print_ (Printer s) = traverse_ putStrLn s
 
 
 -- | Synonym for 'print_'
-log_ :: Printer a -> IO ()
+log_ :: Printer Text a -> IO ()
 log_ = print_
 
 
 -- | Write some lines to a handle.
-hPrint :: Handle -> Printer a -> IO ()
+hPrint :: Handle -> Printer Text a -> IO ()
 hPrint h = traverse_ (hPutStrLn h) . getLines
 
 
 -- | Synonym for 'hPrint'
-hLog :: Handle -> Printer a -> IO ()
+hLog :: Handle -> Printer Text a -> IO ()
 hLog = hPrint
 
 
 -- | Get all the printer contents as a single piece of 'Text' (inserts newlines)
-getText :: Printer a -> Text
+getText :: Printer Text a -> Text
 getText = unlines . getLines
 
 
 -- | Convert a non-literal String to something printable
-convertString :: CS.ConvertibleStrings a Text => a -> Printer c
+convertString :: CS.ConvertibleStrings a t => a -> Printer t c
 convertString = Printer . return . CS.convertString
 
 
 -- | shorter form of 'convertString'
-cs :: CS.ConvertibleStrings a Text => a -> Printer c
+cs :: CS.ConvertibleStrings a t => a -> Printer t c
 cs = convertString
 
 
 -- | convert a showable piece of data into something printable
-convertObject :: Show a => a -> Printer b
-convertObject = convertString . show
+convertObject :: (IsString t, Show a) => a -> Printer t b
+convertObject = fromString . show
 
 
 -- | shorter form of 'convertObject'
-co :: Show a => a -> Printer b
+co :: (IsString t, Show a) => a -> Printer t b
 co = convertObject
