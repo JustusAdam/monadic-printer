@@ -136,7 +136,7 @@ module Text.MonadicPrinter
 
 
 import           Control.Applicative     hiding (empty)
-import           Data.Foldable           (traverse_)
+import           Data.Foldable           (traverse_, foldMap)
 import           Data.Sequence
 import           Data.Monoid
 import           Data.String             (IsString, fromString)
