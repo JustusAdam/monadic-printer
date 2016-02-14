@@ -113,7 +113,7 @@ Prints
 -}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE OverloadedStrings, TypeOperators #-}
 
 module Text.MonadicPrinter
   (
@@ -135,9 +135,9 @@ module Text.MonadicPrinter
   ) where
 
 
-import           Control.Applicative
+import           Control.Applicative     hiding (empty)
 import           Data.Foldable           (traverse_)
-import           Data.List               (intersperse)
+import           Data.Sequence
 import           Data.Monoid
 import           Data.String             (IsString, fromString)
 import qualified Data.String.Conversions as CS (ConvertibleStrings,
@@ -154,7 +154,7 @@ import           Unsafe.Coerce
 -- The type variale only exists for the 'Monad' instance and is ignored in all
 -- operations.
 newtype Printer t a = Printer
-  { getLines :: [t] -- ^ Get all contents of the printer as list of lines
+  { getLines :: Seq t -- ^ Get all contents of the printer as list of lines
   }
 
 
@@ -163,7 +163,7 @@ instance Functor (Printer t) where
 
 
 instance Applicative (Printer t) where
-  pure = const $ Printer []
+  pure = const $ Printer empty
   f <*> v = f >> fmap unsafeCoerce v
   (Printer c1) *> (Printer c2) = Printer (c1 <> c2)
   (Printer c1) <* (Printer c2) = Printer (c2 <> c1)
@@ -178,16 +178,16 @@ instance Monad (Printer t) where
 
 
 instance IsString t => IsString (Printer t a) where
-  fromString s = Printer [fromString s]
+  fromString = Printer . singleton . fromString
 
 
 instance Monoid t => Monoid (Printer t a) where
-  mempty = Printer []
+  mempty = Printer empty
   mappend (Printer s1) (Printer s2) =
-    Printer $ case (reverse s1, s2) of
-                ([], y) -> y
-                (_, []) -> s1
-                (x:xs, y:ys) -> reverse xs <> (x <> y : ys)
+    Printer $ case (viewr s1, viewl s2) of
+                (EmptyR, _) -> s2
+                (_, EmptyL) -> s1
+                ((xs :> x), (y :< ys)) -> xs <> (x <> y <| ys)
 
 
 -- | Write some lines to stdout. For a version that writes to a different handle
@@ -213,7 +213,7 @@ hLog = hPrint
 
 -- | Get all the printer contents as a single piece of 'Text' (inserts newlines)
 getText :: (Monoid t, IsString t) => Printer t a -> t
-getText = mconcat . intersperse "\n" . getLines
+getText = foldMap (<> "\n") . getLines
 
 
 -- | Convert a non-literal String to something printable
